@@ -7,7 +7,7 @@ using namespace strsim;
 #define NUM_BLOCKS 20
 #define NUM_TEST 10000
 
-int main() {
+int main(void) {
 	unsigned int * degrees = new unsigned int [NUM_BLOCKS];
 
 	cout << "Test Soliton Distribution Generator" << endl;

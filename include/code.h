@@ -36,7 +36,7 @@ namespace strsim {
 		 *
 		 */
 		void virtual encode(unsigned int inum, unsigned int onum,
-				std::vector<coded_block> &b) = 0;
+				std::vector<coded_block *> &b) = 0;
 
 		/**
 		 * @brief reconstruct the original data by adding a new coded block
@@ -47,7 +47,7 @@ namespace strsim {
 		 * If this nunber equal to 0 then the decoding
 		 * process ends successfully.
 		 */
-		unsigned int virtual decode(coded_block b) = 0;
+		unsigned int virtual decode(coded_block * b) = 0;
 		
 		/** restart the decoding process */
 		void restart(void) {
@@ -79,8 +79,8 @@ namespace strsim {
 	public:
 		int type(void) { return RATELESS_TYPE; }
 		void  encode(unsigned int inum, unsigned int onum,
-				std::vector<coded_block> &b);
-		unsigned int decode(coded_block b);
+				std::vector<coded_block *> &b);
+		unsigned int decode(coded_block * b);
 	};
 
 	class degree_generator {

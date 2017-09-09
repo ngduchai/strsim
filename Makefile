@@ -35,9 +35,11 @@ all: prepare
 prepare:
 	mkdir -p $(BIN) $(OBJ)
 
+test: testrand
+
 # Test random generators
 testrand: $(TEST_RAND)
-	$(MAKE) $(LFLAGS) $(TEST_ALLOCATOR) -o $(ROOT)/$(TESTS)/test_rand $(LIB)
+	$(MAKE) $(LFLAGS) $(TEST_RAND) -o $(ROOT)/$(TESTS)/test_rand $(LIB)
 	$(ROOT)/$(TESTS)/test_rand
 
 # Create objects from sources

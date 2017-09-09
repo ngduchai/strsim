@@ -15,8 +15,7 @@ void strsim::soliton_generator::setup(
 
 strsim::degree_generator::value_type strsim::soliton_generator::sample() {
 	using value_type = strsim::degree_generator::value_type;
-	std::random_device rd;
-	std::mt19937 gen(rd());
+	std::default_random_engine gen;
 	double seed = _dist(gen);
 	// search for seed over cdf using binary search
 	value_type f = 0;
@@ -35,11 +34,11 @@ strsim::degree_generator::value_type strsim::soliton_generator::sample() {
 }
 
 void strsim::rateless_coder::encode(unsigned int inum, unsigned int onum,
-		std::vector<strsim::coded_block> &b) {
+		std::vector<strsim::coded_block *> &b) {
 	
 }
 
-unsigned int strsim::rateless_coder::decode(strsim::coded_block b) {
+unsigned int strsim::rateless_coder::decode(strsim::coded_block * b) {
 	
 	return _block_left;
 }
