@@ -13,10 +13,10 @@ int main(void) {
 	cout << "Test Soliton Distribution Generator" << endl;
 	soliton_generator sg(NUM_BLOCKS);
 	for (unsigned int i = 0; i < NUM_TEST; ++i) {
-		degrees[i] = sg.sample();
+		degrees[sg.sample() - 1]++;
 	}
 	for (unsigned int i = 0; i < NUM_BLOCKS; ++i) {
-		cout << "i\t" << degrees[i] << endl;
+		cout << i+1 << "," << double(degrees[i]) / NUM_TEST << endl;
 	}
 	
 	delete[] degrees;

@@ -13,7 +13,7 @@ CC = g++
 STD = -std=c++11
 DEBUG = -g
 
-DFLAGS = 
+DFLAGS = -DDEBUG_ON
 CFLAGS = -Wall -c -O2 $(DEBUG) $(STD) $(DFLAGS)
 LFLAGS = -Wall -O2 $(DEBUG) $(STD) $(DFLAGS)
 SFLAGS = -Wall -shared -fpic -O2 $(DEBUG) $(STD) $(DFLAGS)

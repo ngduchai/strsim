@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 #include <random>
+#include <list>
+#include "common.h"
 
 #define RATELESS_TYPE 1
 
@@ -13,19 +15,20 @@ namespace strsim {
 	public:
 		/** Block type. */
 		int virtual type(void) = 0;
-		unsigned long arrive_time;
-		std::vector<int> raw_blocks; /// raw blocks contribute to this block
+		time_t arrieve_time;
+	};
+
+	class rateless_block : public coded_block {	
+	public:
+		typedef unsigned int value_type;
+		typedef unsigned int size_type;
+		std::list<value_type> raw_blocks;
+		int inline virtual type(void) { return RATELESS_TYPE; }
 	};
 
 	/** Encode raw data to a set of @ref coded_block and reverse */
 	class coder {
-	protected:
-		std::vector<bool> _raw_blocks;
-		unsigned int _block_left;
 	public:
-
-		coder() : _raw_blocks(), _block_left(0) {}
-
 		/**
 		 * @brief generate coded blocks from raw data.
 		 * The method also restarts the decode engine.
@@ -50,37 +53,54 @@ namespace strsim {
 		unsigned int virtual decode(coded_block * b) = 0;
 		
 		/** restart the decoding process */
-		void restart(void) {
-			for (auto block : _raw_blocks) {
-				block = false;
-			}
-			_block_left = _raw_blocks.size();
-		}
+		void virtual restart(void) = 0;
 
 		/** indicate if the decoding process ended or not */
-		bool inline has_finish(void) {return _block_left == 0; }
+		bool virtual has_finished(void) = 0;
 	
 		/** decoder type, blocks used for restoring the original data must
 		 * have the same type. */
 		int virtual type(void) = 0;
 
-		/** give a raw block to decoder so it does have to restore
+		/** give a raw block to decoder so it does not have to restore
 		 * this block from coded blocks */
-		void virtual feed(int index) {
-			if (_raw_blocks[index] == false) {
-				_block_left--;
-				_raw_blocks[index] = true;
-			}
-		}
+		void virtual feed(int /* index */) = 0;
 
 	};
 
-	class rateless_coder : coder {
+	class rateless_coder : public coder {
+	public:
+		typedef unsigned int value_type;
+		typedef unsigned int size_type;
+	private:
+		std::list<value_type> _raw_queue;
+		std::list<std::list<value_type>> _coding_queue;
+		std::vector<value_type> _raw_table;
+		size_type _num_blocks;
 	public:
 		int type(void) { return RATELESS_TYPE; }
-		void  encode(unsigned int inum, unsigned int onum,
+		void encode(unsigned int inum, unsigned int onum,
 				std::vector<coded_block *> &b);
 		unsigned int decode(coded_block * b);
+		
+		void virtual restart(void) {
+			for (size_type i = 0; i < _num_blocks; ++i) {
+				_raw_table[i] = false;
+			}
+			_raw_queue.clear();
+			_coding_queue.clear();
+		}
+
+		bool virtual inline has_finished(void) {
+			return _num_blocks == _raw_queue.size();
+		}
+
+		void virtual feed(int index) {
+			if (!_raw_table[index]) {
+				_raw_queue.push_back(index);
+				_raw_table[index] = true;
+			}
+		};
 	};
 
 	class degree_generator {
@@ -92,14 +112,13 @@ namespace strsim {
 		value_type virtual sample(void) = 0;
 	};
 
-	class soliton_generator : degree_generator {
-
+	class soliton_generator : public degree_generator {
 	private:
 		// use uniform distribution for random generation
+		std::default_random_engine _gen;
 		std::uniform_real_distribution<double> _dist;
 		double * _cdf; // table for cdf
 		value_type _size;
-
 	public:
 		soliton_generator() : _dist(0, 1), _cdf(nullptr) {};
 		soliton_generator(value_type seed) : soliton_generator() {
