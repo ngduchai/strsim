@@ -64,7 +64,13 @@ flags = [
 '-I',
 '/usr/local/include',
 '-I',
-'/usr/include/c++/5.4.1/'
+'/usr/include/c++/5.4.1/',
+'-I',
+'.',
+'-I',
+'./inc',
+'-I',
+'./include'
 ]
 
 
