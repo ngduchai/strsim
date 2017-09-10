@@ -2,8 +2,8 @@
 #include "iostream"
 
 void strsim::soliton_generator::setup(
-		strsim::degree_generator::value_type seed) {
-	using value_type = strsim::degree_generator::value_type;
+		strsim::rnd_generator::value_type seed) {
+	using value_type = strsim::rnd_generator::value_type;
 	// build the distribution table
 	delete[] _cdf;
 	_size = seed + 1;
@@ -20,8 +20,8 @@ void strsim::soliton_generator::setup(
 	*/
 }
 
-strsim::degree_generator::value_type strsim::soliton_generator::sample() {
-	using value_type = strsim::degree_generator::value_type;
+strsim::rnd_generator::value_type strsim::soliton_generator::sample() {
+	using value_type = strsim::rnd_generator::value_type;
 	double seed = _dist(_gen);
 	// search for seed over cdf using binary search
 	value_type f = 0;
@@ -45,7 +45,8 @@ void strsim::rateless_coder::encode(unsigned int inum, unsigned int onum,
 	using value_type = strsim::rateless_block::value_type;
 	bool finished = false;
 	soliton_generator gen(inum);
-	std::default_random_engine rden;
+	std::random_device rd;
+	std::mt19937 rden(rd());
 	std::uniform_int_distribution<unsigned int> dist(0, inum - 1);
 	_num_blocks = inum;
 	_raw_table.clear();
@@ -70,6 +71,7 @@ void strsim::rateless_coder::encode(unsigned int inum, unsigned int onum,
 				_raw_table[raw] = false;
 			}
 		}
+		break;
 		// check again to make sure that we could  restore the raw data
 		// from coded blocks
 		this->restart();
@@ -93,12 +95,16 @@ unsigned int strsim::rateless_coder::decode(strsim::coded_block * b) {
 		// check if we could reduce the regree of the block
 		for (	auto encoded_block = block.begin();
 				encoded_block != block.end(); ) {
+			bool manual = true;
 			for (auto decoded_block : _raw_queue) {
 				if (*encoded_block == decoded_block) {
-					block.erase(encoded_block);
-				}else{
-					encoded_block++;
+					encoded_block = block.erase(encoded_block);
+					manual = false;
+					break;
 				}
+			}
+			if (manual) {
+				encoded_block++;
 			}
 		}	
 	}
@@ -114,6 +120,7 @@ unsigned int strsim::rateless_coder::decode(strsim::coded_block * b) {
 		_raw_queue.push_back(raw);
 		_raw_table[raw] = true;
 		buffer.push_back(raw);
+		DBG("Block " << raw << " recovered");
 	}
 	// used block that has just recovered for decoding other blocks
 	while (!buffer.empty()) {
@@ -124,7 +131,7 @@ unsigned int strsim::rateless_coder::decode(strsim::coded_block * b) {
 			for (	auto encoded_block = decoded_block->begin();
 					encoded_block != decoded_block->end(); ) {
 				if (raw == *encoded_block) {
-					decoded_block->erase(encoded_block);
+					encoded_block = decoded_block->erase(encoded_block);
 				}else{
 					encoded_block++;
 				}
@@ -135,7 +142,8 @@ unsigned int strsim::rateless_coder::decode(strsim::coded_block * b) {
 				_raw_queue.push_back(b);
 				_raw_table[b] = true;
 				buffer.push_back(b);
-				_coding_queue.erase(decoded_block);
+				decoded_block = _coding_queue.erase(decoded_block);
+				DBG("Block " << b << " recovered");
 			}else{
 				decoded_block++;
 			}

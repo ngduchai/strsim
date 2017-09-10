@@ -16,6 +16,7 @@ namespace strsim {
 		/** Block type. */
 		int virtual type(void) = 0;
 		time_t arrieve_time;
+		virtual ~coded_block() {};
 	};
 
 	class rateless_block : public coded_block {	
@@ -24,6 +25,7 @@ namespace strsim {
 		typedef unsigned int size_type;
 		std::list<value_type> raw_blocks;
 		int inline virtual type(void) { return RATELESS_TYPE; }
+		virtual ~rateless_block() {};
 	};
 
 	/** Encode raw data to a set of @ref coded_block and reverse */
@@ -103,30 +105,23 @@ namespace strsim {
 		};
 	};
 
-	class degree_generator {
-	public:
-		typedef unsigned int value_type;
-		/** Setup the generator, must be called before sampling */
-		void virtual setup(value_type seed) = 0;
-		/** Sampling from the generator */
-		value_type virtual sample(void) = 0;
-	};
-
-	class soliton_generator : public degree_generator {
+	
+	class soliton_generator : public rnd_generator {
 	private:
 		// use uniform distribution for random generation
-		std::default_random_engine _gen;
+		std::mt19937 _gen;
 		std::uniform_real_distribution<double> _dist;
 		double * _cdf; // table for cdf
 		value_type _size;
 	public:
-		soliton_generator() : _dist(0, 1), _cdf(nullptr) {};
+		soliton_generator() : _gen(std::random_device()()),
+				_dist(0, 1), _cdf(nullptr) {};
 		soliton_generator(value_type seed) : soliton_generator() {
 			setup(seed);
 		}
 		~soliton_generator() { delete _cdf; };
 		/** Setup the generator, must be called before sampling */
-		void virtual setup(value_type seed);
+		void setup(value_type seed);
 		/** Sampling from the generator */
 		value_type sample();
 	};
