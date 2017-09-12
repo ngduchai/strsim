@@ -70,16 +70,60 @@ namespace strsim {
 
 	};
 
+	class degree_generator : public rnd_generator {
+	public:
+		void virtual setup(value_type seed) = 0;
+		virtual ~degree_generator() {}
+	};
+
+	class soliton_generator : public degree_generator {
+	private:
+		// use uniform distribution for random generation
+		std::mt19937 _gen;
+		std::uniform_real_distribution<double> _dist;
+		double * _cdf; // table for cdf
+		value_type _size;
+	public:
+		soliton_generator() : _gen(std::random_device()()),
+				_dist(0, 1), _cdf(nullptr) {};
+		soliton_generator(value_type seed) : soliton_generator() {
+			setup(seed);
+		}
+		~soliton_generator() { delete _cdf; };
+		/** Setup the generator, must be called before sampling */
+		void setup(value_type seed);
+		/** Sampling from the generator */
+		value_type sample();
+	};
+
+	class uniform_generator : public degree_generator {
+	private:
+		std::mt19937 _gen;
+		std::uniform_real_distribution<double> _dist;
+		value_type _range;
+	public:
+		uniform_generator() : _gen(std::random_device()()), _dist(0, 1) {};
+		uniform_generator(value_type seed) : uniform_generator() {
+			setup(seed);
+		}
+		void setup(value_type seed);
+		value_type sample();
+	};
+
+
 	class rateless_coder : public coder {
 	public:
 		typedef unsigned int value_type;
 		typedef unsigned int size_type;
-	private:
+	protected:
 		std::list<value_type> _raw_queue;
 		std::list<std::list<value_type>> _coding_queue;
 		std::vector<value_type> _raw_table;
 		size_type _num_blocks;
+		degree_generator * _gen;
 	public:
+		rateless_coder() : _gen(new uniform_generator()) {};
+		~rateless_coder() { delete _gen; };
 		int type(void) { return RATELESS_TYPE; }
 		void encode(unsigned int inum, unsigned int onum,
 				std::vector<coded_block *> &b);
@@ -105,27 +149,15 @@ namespace strsim {
 		};
 	};
 
-	
-	class soliton_generator : public rnd_generator {
-	private:
-		// use uniform distribution for random generation
-		std::mt19937 _gen;
-		std::uniform_real_distribution<double> _dist;
-		double * _cdf; // table for cdf
-		value_type _size;
+	class luby_coder : public rateless_coder {
 	public:
-		soliton_generator() : _gen(std::random_device()()),
-				_dist(0, 1), _cdf(nullptr) {};
-		soliton_generator(value_type seed) : soliton_generator() {
-			setup(seed);
-		}
-		~soliton_generator() { delete _cdf; };
-		/** Setup the generator, must be called before sampling */
-		void setup(value_type seed);
-		/** Sampling from the generator */
-		value_type sample();
+		luby_coder() {
+			delete _gen;
+			_gen = new soliton_generator();
+		};
 	};
-
+	
+	
 }
 
 #endif

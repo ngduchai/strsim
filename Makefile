@@ -4,6 +4,7 @@ LIB = -lpthread
 
 SRC = src
 OBJ = obj
+VISUAL = visual
 TESTS = tests
 INCLUDE = include
 BIN = bin
@@ -13,7 +14,7 @@ CC = g++
 STD = -std=c++11
 DEBUG = -g
 
-DFLAGS = -DDEBUG_ON
+DFLAGS = #-DDEBUG_ON
 CFLAGS = -Wall -c -O2 $(DEBUG) $(STD) $(DFLAGS)
 LFLAGS = -Wall -O2 $(DEBUG) $(STD) $(DFLAGS)
 SFLAGS = -Wall -shared -fpic -O2 $(DEBUG) $(STD) $(DFLAGS)
@@ -30,11 +31,12 @@ HEADER = $(wildcard $(INCLUDE)/*.h)
 # Object files needed by modules
 TEST_RAND = tests/rand.cpp $(addprefix $(OBJ)/, code.o store.o)
 TEST_CODE = tests/code.cpp $(addprefix $(OBJ)/, code.o)
+SIMPLE_SIM = $(addprefix $(OBJ)/, code.o store.o simplesim.o)
 
 all: prepare
 
 prepare:
-	mkdir -p $(BIN) $(OBJ)
+	mkdir -p $(BIN) $(OBJ) $(VISUAL)
 
 test: testrand
 
@@ -47,6 +49,10 @@ testrand: $(TEST_RAND)
 testcode: $(TEST_CODE)
 	$(MAKE) $(LFLAGS) $(TEST_CODE) -o $(ROOT)/$(TESTS)/test_code $(LIB)
 	$(ROOT)/$(TESTS)/test_code
+
+# Test random generators
+simplesim: $(SIMPLE_SIM)
+	$(MAKE) $(LFLAGS) $(SIMPLE_SIM) -o $(ROOT)/$(BIN)/simplesim $(LIB)
 
 
 

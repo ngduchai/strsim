@@ -40,11 +40,22 @@ strsim::rnd_generator::value_type strsim::soliton_generator::sample() {
 	return l + 1;
 }
 
+void strsim::uniform_generator::setup(
+		strsim::rnd_generator::value_type seed) {
+	_range = seed;
+}
+
+strsim::rnd_generator::value_type strsim::uniform_generator::sample() {
+	double seed = _dist(_gen);
+	return (seed * double(_range)) + 1;
+}
+
+
 void strsim::rateless_coder::encode(unsigned int inum, unsigned int onum,
 		std::vector<strsim::coded_block *> &b) {
 	using value_type = strsim::rateless_block::value_type;
 	bool finished = false;
-	soliton_generator gen(inum);
+	_gen->setup(inum);
 	std::random_device rd;
 	std::mt19937 rden(rd());
 	std::uniform_int_distribution<unsigned int> dist(0, inum - 1);
@@ -57,7 +68,7 @@ void strsim::rateless_coder::encode(unsigned int inum, unsigned int onum,
 		b.clear(); // prepare for new blocks
 		for (unsigned int i = 0; i < onum; ++i) {
 			rateless_block * block = new rateless_block();
-			value_type num_raw_blocks = gen.sample();
+			value_type num_raw_blocks = _gen->sample();
 			for (unsigned int i = 0; i < num_raw_blocks; ++i) {
 				value_type raw = dist(rden);
 				while (_raw_table[raw]) {
@@ -71,17 +82,17 @@ void strsim::rateless_coder::encode(unsigned int inum, unsigned int onum,
 				_raw_table[raw] = false;
 			}
 		}
-		break;
+		//break;
 		// check again to make sure that we could  restore the raw data
 		// from coded blocks
 		this->restart();
 		for (auto block : b) {
 			if (this->decode(block) == 0) {
 				finished = true;
-				this->restart();
 				break;
 			}
 		}
+		this->restart();
 	}
 }
 

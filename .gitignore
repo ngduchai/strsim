@@ -2,3 +2,4 @@ tests/test_*
 obj/*
 bin/*
 *.swp
+visual/*

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <fstream>
 #include "code.h"
 #include "store.h"
 
@@ -8,6 +9,10 @@
 #define DELAY 1.0
 
 #define NUM_TEST 10000
+#define TIME_RANGE 10000
+
+#define VISUAL_DIST "visual/dist"
+#define VISUAL_SCALARS "visual/scalars"
 
 int main(int argc, char ** argv) {
 	if (argc != 4) {
@@ -29,6 +34,15 @@ int main(int argc, char ** argv) {
 	std::vector<time_t> ftime;
 	std::vector<time_t> rtime;
 	std::vector<time_t> mtime;
+
+	unsigned long * arrival = new unsigned long [TIME_RANGE];
+	unsigned long * complete = new unsigned long [TIME_RANGE];
+	unsigned long * rcache = new unsigned long [TIME_RANGE];
+	for (int i = 0; i < TIME_RANGE; ++i) {
+		arrival[i] = 0;
+		complete[i] = 0;
+		rcache[i] = 0;
+	}
 	
 	std::cout << "Loading data" << std::endl;
 	for (unsigned int i = 0; i < NUM_TEST; ++i) {
@@ -39,6 +53,12 @@ int main(int argc, char ** argv) {
 		coder.encode(RAW_SIZE, CODED_SIZE, blocks);
 		for (auto block : blocks) {
 			block->arrieve_time = eg.sample();
+			if (block->arrieve_time >= TIME_RANGE) {
+				continue;
+			}
+			for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
+				arrival[j]++;
+			}
 		}
 		std::sort(blocks.begin(), blocks.end(), [] (strsim::coded_block* f,
 				strsim::coded_block* s) -> bool {
@@ -47,17 +67,28 @@ int main(int argc, char ** argv) {
 		coder.restart();
 		bool wait = false;
 		mtime.push_back(blocks[RAW_SIZE - CACHED_SIZE]->arrieve_time);
+		unsigned int lastleft = RAW_SIZE;
 		for (auto block : blocks) {
-			if (coder.decode(block) <= CACHED_SIZE && !wait) {
+			unsigned int bleft = coder.decode(block);
+			if (bleft < lastleft) {
+				for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
+					complete[j] += lastleft - bleft;
+				}
+				lastleft = bleft;
+			}
+			if (bleft <= CACHED_SIZE && !wait) {
 				rtime.push_back(block->arrieve_time);
 				wait = true;
+				for (unsigned int j = block->arrieve_time;
+						j < TIME_RANGE; ++j) {
+					rcache[j] += CACHED_SIZE;
+				}
 			}
 			if (coder.has_finished()) {
 				ftime.push_back(block->arrieve_time);
 				break;
 			}
 		}
-		//std::cout << rtime.back() << " " << ftime.back() << std::endl;
 
 	}
 	double tf = 0;
@@ -90,7 +121,20 @@ int main(int argc, char ** argv) {
 	std::cout << "99-th rtime = " << rt << std::endl;
 	std::cout << "99-th mtime = " << mt << std::endl;
 	std::cout << "Gain rtime = " << double(ft - rt) / ft << std::endl;	
-	std::cout << "Gain mtime = " << double(ft - mt) / ft << std::endl;	
+	std::cout << "Gain mtime = " << double(ft - mt) / ft << std::endl;
+	/* Write arrival distribution to output file */
+	std::ofstream report(VISUAL_DIST);
+	for (time_t i = 0; i < TIME_RANGE; ++i) {
+		report << double(i) / 1000 << "," <<
+			double(arrival[i]) / double(arrival[TIME_RANGE-1]) << "," <<
+			double(complete[i]) / double(complete[TIME_RANGE-1]) << "," <<
+			double(rcache[i]) / double(rcache[TIME_RANGE-1]) << "," <<
+			std::endl;
+	}
+	report.close();
+	delete[] arrival;
+	delete[] complete;
+	delete[] rcache;
 	return 0;
 }
 
