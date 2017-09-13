@@ -10,9 +10,17 @@
 
 #define NUM_TEST 10000
 #define TIME_RANGE 10000
+#define BLOCK_RANGE 100
 
 #define VISUAL_DIST "visual/dist"
+#define VISUAL_CMF "visual/cmf"
+#define VISUAL_PROGRESS "visual/progress"
+#define VISUAL_TAIL "visual_tail"
 #define VISUAL_SCALARS "visual/scalars"
+
+struct loadrecord {
+	std::vector<strsim::coded_block*> blocks; 
+};
 
 int main(int argc, char ** argv) {
 	if (argc != 4) {
@@ -38,10 +46,18 @@ int main(int argc, char ** argv) {
 	unsigned long * arrival = new unsigned long [TIME_RANGE];
 	unsigned long * complete = new unsigned long [TIME_RANGE];
 	unsigned long * rcache = new unsigned long [TIME_RANGE];
+	unsigned long * constructed = new unsigned long [TIME_RANGE];
+	unsigned long * nwait = new unsigned long [BLOCK_RANGE];
+	unsigned long * nrestore = new unsigned long [BLOCK_RANGE];
 	for (int i = 0; i < TIME_RANGE; ++i) {
 		arrival[i] = 0;
 		complete[i] = 0;
 		rcache[i] = 0;
+		constructed[i] = 0;
+	}
+	for (int i = 0; i < BLOCK_RANGE; ++i) {
+		nwait[i] = 0;
+		nrestore[i] = 0;
 	}
 	
 	std::cout << "Loading data" << std::endl;
@@ -68,13 +84,23 @@ int main(int argc, char ** argv) {
 		bool wait = false;
 		mtime.push_back(blocks[RAW_SIZE - CACHED_SIZE]->arrieve_time);
 		unsigned int lastleft = RAW_SIZE;
+		unsigned int waitcount = 0;
 		for (auto block : blocks) {
 			unsigned int bleft = coder.decode(block);
 			if (bleft < lastleft) {
 				for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
 					complete[j] += lastleft - bleft;
 				}
+				nrestore[lastleft - bleft - 1]++;
+				if (waitcount < BLOCK_RANGE) {
+					nwait[waitcount]++;
+				}else{
+					nwait[BLOCK_RANGE-1]++;
+				}
+				waitcount = 0;
 				lastleft = bleft;
+			}else{
+				waitcount++;
 			}
 			if (bleft <= CACHED_SIZE && !wait) {
 				rtime.push_back(block->arrieve_time);
@@ -85,11 +111,13 @@ int main(int argc, char ** argv) {
 				}
 			}
 			if (coder.has_finished()) {
+				for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
+					constructed[j]++;
+				}
 				ftime.push_back(block->arrieve_time);
 				break;
 			}
 		}
-
 	}
 	double tf = 0;
 	double tr = 0;
@@ -123,18 +151,42 @@ int main(int argc, char ** argv) {
 	std::cout << "Gain rtime = " << double(ft - rt) / ft << std::endl;	
 	std::cout << "Gain mtime = " << double(ft - mt) / ft << std::endl;
 	/* Write arrival distribution to output file */
-	std::ofstream report(VISUAL_DIST);
+	std::ofstream report_dist(VISUAL_DIST);
+	std::ofstream report_cmf(VISUAL_CMF);
+	std::ofstream report_progress(VISUAL_PROGRESS);
 	for (time_t i = 0; i < TIME_RANGE; ++i) {
-		report << double(i) / 1000 << "," <<
+		report_cmf << double(i) / 1000 << "," <<
 			double(arrival[i]) / double(arrival[TIME_RANGE-1]) << "," <<
 			double(complete[i]) / double(complete[TIME_RANGE-1]) << "," <<
 			double(rcache[i]) / double(rcache[TIME_RANGE-1]) << "," <<
+			double(constructed[i]) /
+			double(constructed[TIME_RANGE-1]) << "," <<
 			std::endl;
 	}
-	report.close();
+	for (time_t i = 1; i < TIME_RANGE; ++i) {
+		report_dist << double(i) / 1000 << "," <<
+			double(arrival[i] - arrival[i-1]) /
+			double(arrival[TIME_RANGE-1]) * TIME_RANGE << "," <<
+			double(complete[i] - complete[i-1]) /
+			double(complete[TIME_RANGE-1]) * TIME_RANGE << "," <<
+			double(rcache[i] - rcache[i-1]) /
+			double(rcache[TIME_RANGE-1]) << "," <<
+			double(constructed[i] - constructed[i-1]) /
+			double(constructed[TIME_RANGE-1]) << "," <<
+			std::endl;	
+	}
+	for (time_t i = 0; i < BLOCK_RANGE; ++i) {
+		report_progress << i + 1 << "," <<
+			nwait[i] << "," << nrestore[i] << std::endl;
+	}
+	report_dist.close();
+	report_cmf.close();
+	report_progress.close();
 	delete[] arrival;
 	delete[] complete;
 	delete[] rcache;
+	delete[] nwait;
+	delete[] nrestore;
 	return 0;
 }
 
