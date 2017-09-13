@@ -5,7 +5,9 @@ void strsim::soliton_generator::setup(
 		strsim::rnd_generator::value_type seed) {
 	using value_type = strsim::rnd_generator::value_type;
 	// build the distribution table
-	delete[] _cdf;
+	if (_cdf != nullptr) {
+		delete[] _cdf;
+	}
 	_size = seed + 1;
 	_cdf = new double [seed + 1];
 	_cdf[0] = 0;

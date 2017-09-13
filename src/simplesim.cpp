@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <fstream>
+#include <list>
 #include "code.h"
 #include "store.h"
 
@@ -12,14 +13,23 @@
 #define TIME_RANGE 10000
 #define BLOCK_RANGE 100
 
-#define VISUAL_DIST "visual/dist"
-#define VISUAL_CMF "visual/cmf"
-#define VISUAL_PROGRESS "visual/progress"
-#define VISUAL_TAIL "visual_tail"
-#define VISUAL_SCALARS "visual/scalars"
+#define VISUAL_DIST "visual/data/dist"
+#define VISUAL_CMF "visual/data/cmf"
+#define VISUAL_FR "visual/data/fr"
+#define VISUAL_TAIL "visual/data/tail"
+#define VISUAL_HEAD "visual/data/head"
+#define VISUAL_MID "visual/data/mid"
+#define VISUAL_SCALARS "visual/data/scalars"
 
 struct loadrecord {
-	std::vector<strsim::coded_block*> blocks; 
+	// blocks used for reconstruct the original data
+	std::vector<strsim::coded_block*> blocks;
+	time_t ftime; 	// Original latency
+	time_t rtime; 	// Latency of caching the several last blocks
+	time_t mtime; 	// Latency of trying to cache and use block from
+					// the very beginning
+	// list of block left when loading data
+	std::list<unsigned int> blockleft;
 };
 
 int main(int argc, char ** argv) {
@@ -35,19 +45,25 @@ int main(int argc, char ** argv) {
 	const unsigned int CODED_SIZE = RAW_SIZE * DUP_FACTOR;
 	const unsigned int CACHED_SIZE  = RAW_SIZE * CACHE_FACTOR;
 	
-	std::vector<strsim::coded_block*> blocks;
-	//strsim::rateless_coder coder;
 	strsim::luby_coder coder;
 	strsim::erlang_generator eg(SHAPE, RATE, DELAY);
-	std::vector<time_t> ftime;
-	std::vector<time_t> rtime;
-	std::vector<time_t> mtime;
-
+	
+	// number of block arrival after a certain point of time
 	unsigned long * arrival = new unsigned long [TIME_RANGE];
+	// number of block constructed after a certain point of time
 	unsigned long * complete = new unsigned long [TIME_RANGE];
+	// number of block on the cache use for reconstruction
+	// after a certain point of time
 	unsigned long * rcache = new unsigned long [TIME_RANGE];
+	// number of original data restored after a certain point
+	// of time
 	unsigned long * constructed = new unsigned long [TIME_RANGE];
+	// Assume we restore block N-th and (N+1)-th at t0 and t1,
+	// then we want to know the number of blocks loaded between
+	// t0 and t1 
 	unsigned long * nwait = new unsigned long [BLOCK_RANGE];
+	// The number of block we can reconstruct if we successfully
+	// fetch a new block from storage system
 	unsigned long * nrestore = new unsigned long [BLOCK_RANGE];
 	for (int i = 0; i < TIME_RANGE; ++i) {
 		arrival[i] = 0;
@@ -59,15 +75,17 @@ int main(int argc, char ** argv) {
 		nwait[i] = 0;
 		nrestore[i] = 0;
 	}
-	
+
+	std::vector<loadrecord> data;
 	std::cout << "Loading data" << std::endl;
 	for (unsigned int i = 0; i < NUM_TEST; ++i) {
+		loadrecord trail;
 		if ((i+1) % (NUM_TEST / 10) == 0) {
 			std::cout << "Processed " <<
 				(i+1) / (NUM_TEST / 100) << "%" << std::endl;
 		}
-		coder.encode(RAW_SIZE, CODED_SIZE, blocks);
-		for (auto block : blocks) {
+		coder.encode(RAW_SIZE, CODED_SIZE, trail.blocks);
+		for (auto block : trail.blocks) {
 			block->arrieve_time = eg.sample();
 			if (block->arrieve_time >= TIME_RANGE) {
 				continue;
@@ -76,17 +94,19 @@ int main(int argc, char ** argv) {
 				arrival[j]++;
 			}
 		}
-		std::sort(blocks.begin(), blocks.end(), [] (strsim::coded_block* f,
+		std::sort(trail.blocks.begin(), trail.blocks.end(),
+				[] (strsim::coded_block* f,
 				strsim::coded_block* s) -> bool {
 					return (f->arrieve_time < s->arrieve_time);
 				});
 		coder.restart();
 		bool wait = false;
-		mtime.push_back(blocks[RAW_SIZE - CACHED_SIZE]->arrieve_time);
+		trail.mtime = trail.blocks[RAW_SIZE - CACHED_SIZE]->arrieve_time;
 		unsigned int lastleft = RAW_SIZE;
 		unsigned int waitcount = 0;
-		for (auto block : blocks) {
+		for (auto block : trail.blocks) {
 			unsigned int bleft = coder.decode(block);
+			trail.blockleft.push_back(bleft);
 			if (bleft < lastleft) {
 				for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
 					complete[j] += lastleft - bleft;
@@ -103,7 +123,7 @@ int main(int argc, char ** argv) {
 				waitcount++;
 			}
 			if (bleft <= CACHED_SIZE && !wait) {
-				rtime.push_back(block->arrieve_time);
+				trail.rtime = block->arrieve_time;
 				wait = true;
 				for (unsigned int j = block->arrieve_time;
 						j < TIME_RANGE; ++j) {
@@ -114,18 +134,19 @@ int main(int argc, char ** argv) {
 				for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
 					constructed[j]++;
 				}
-				ftime.push_back(block->arrieve_time);
+				trail.ftime = block->arrieve_time;
 				break;
 			}
 		}
+		data.push_back(trail);
 	}
 	double tf = 0;
 	double tr = 0;
 	double trm = 0;
 	for (unsigned int i = 0; i < NUM_TEST; ++i) {
-		tf += ftime[i];
-		tr += rtime[i];
-		trm += mtime[i];
+		tf += data[i].ftime;
+		tr += data[i].rtime;
+		trm += data[i].mtime;
 	}
 	std::cout << "avg ftime = " << tf << std::endl;
 	std::cout << "avg rtime = " << tr << std::endl;
@@ -133,27 +154,53 @@ int main(int argc, char ** argv) {
 	std::cout << "Gain rtime = " << double(tf - tr) / tf << std::endl;	
 	std::cout << "Gain mtime = " << double(tf - trm) / tf << std::endl;	
 
-	std::sort(ftime.begin(), ftime.end(), [] (time_t f, time_t s) -> bool {
-				return (f < s);
+	std::sort(data.begin(), data.end(),
+			[] (loadrecord f, loadrecord s) -> bool {
+				return (f.rtime < s.rtime);
 			});
-	std::sort(rtime.begin(), rtime.end(), [] (time_t f, time_t s) -> bool {
-				return (f < s);
+	time_t rt = data[NUM_TEST / 100 * 99].rtime;
+	std::sort(data.begin(), data.end(),
+			[] (loadrecord f, loadrecord s) -> bool {
+				return (f.mtime < s.mtime);
 			});
-	std::sort(mtime.begin(), mtime.end(), [] (time_t f, time_t s) -> bool {
-				return (f < s);
+	time_t mt = data[NUM_TEST / 100 * 99].mtime;
+	std::sort(data.begin(), data.end(),
+			[] (loadrecord f, loadrecord s) -> bool {
+				return (f.ftime < s.ftime);
 			});
-	time_t ft = ftime[NUM_TEST / 100 * 99];
-	time_t rt = rtime[NUM_TEST / 100 * 99];
-	time_t mt = mtime[NUM_TEST / 100 * 99];
+	time_t ft = data[NUM_TEST / 100 * 99].ftime;
 	std::cout << "99-th ftime = " << ft << std::endl;
 	std::cout << "99-th rtime = " << rt << std::endl;
 	std::cout << "99-th mtime = " << mt << std::endl;
 	std::cout << "Gain rtime = " << double(ft - rt) / ft << std::endl;	
 	std::cout << "Gain mtime = " << double(ft - mt) / ft << std::endl;
+	/* Write the progress of 99-th trails */
+	std::ofstream report_progress(VISUAL_TAIL);
+	unsigned int tright = 0;
+	for (unsigned int bleft : data[NUM_TEST / 100 * 99].blockleft) {
+		report_progress << tright << "," << bleft << std::endl;
+		tright++;
+	}
+	report_progress.close();
+	report_progress.open(VISUAL_HEAD);
+	tright = 0;
+	for (unsigned int bleft : data[NUM_TEST / 100 * 5].blockleft) {
+		report_progress << tright << "," << bleft << std::endl;
+		tright++;
+	}
+	report_progress.close();
+	report_progress.open(VISUAL_MID);
+	tright = 0;
+	for (unsigned int bleft : data[NUM_TEST / 100 * 50].blockleft) {
+		report_progress << tright << "," << bleft << std::endl;
+		tright++;
+	}
+	report_progress.close();
+
 	/* Write arrival distribution to output file */
 	std::ofstream report_dist(VISUAL_DIST);
 	std::ofstream report_cmf(VISUAL_CMF);
-	std::ofstream report_progress(VISUAL_PROGRESS);
+	std::ofstream report_fr(VISUAL_FR);
 	for (time_t i = 0; i < TIME_RANGE; ++i) {
 		report_cmf << double(i) / 1000 << "," <<
 			double(arrival[i]) / double(arrival[TIME_RANGE-1]) << "," <<
@@ -176,12 +223,12 @@ int main(int argc, char ** argv) {
 			std::endl;	
 	}
 	for (time_t i = 0; i < BLOCK_RANGE; ++i) {
-		report_progress << i + 1 << "," <<
+		report_fr << i + 1 << "," <<
 			nwait[i] << "," << nrestore[i] << std::endl;
 	}
 	report_dist.close();
 	report_cmf.close();
-	report_progress.close();
+	report_fr.close();
 	delete[] arrival;
 	delete[] complete;
 	delete[] rcache;
