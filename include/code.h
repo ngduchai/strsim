@@ -85,11 +85,11 @@ namespace strsim {
 		value_type _size;
 	public:
 		soliton_generator() : _gen(std::random_device()()),
-				_dist(0, 1), _cdf(nullptr) {};
+				_dist(0, 1), _cdf(nullptr), _size(0) {};
 		soliton_generator(value_type seed) : soliton_generator() {
 			setup(seed);
 		}
-		~soliton_generator() { delete _cdf; };
+		~soliton_generator() { if (_cdf != nullptr) { delete[] _cdf; } };
 		/** Setup the generator, must be called before sampling */
 		void setup(value_type seed);
 		/** Sampling from the generator */

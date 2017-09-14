@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <fstream>
 #include <list>
+#include <string>
 #include "code.h"
 #include "store.h"
 
@@ -111,7 +112,11 @@ int main(int argc, char ** argv) {
 				for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
 					complete[j] += lastleft - bleft;
 				}
-				nrestore[lastleft - bleft - 1]++;
+				if (lastleft - bleft - 1 < BLOCK_RANGE) {
+					nrestore[lastleft - bleft - 1]++;
+				}else{
+					nrestore[BLOCK_RANGE - 1]++;
+				}
 				if (waitcount < BLOCK_RANGE) {
 					nwait[waitcount]++;
 				}else{
@@ -155,17 +160,17 @@ int main(int argc, char ** argv) {
 	std::cout << "Gain mtime = " << double(tf - trm) / tf << std::endl;	
 
 	std::sort(data.begin(), data.end(),
-			[] (loadrecord f, loadrecord s) -> bool {
+			[] (loadrecord& f, loadrecord& s) -> bool {
 				return (f.rtime < s.rtime);
 			});
 	time_t rt = data[NUM_TEST / 100 * 99].rtime;
 	std::sort(data.begin(), data.end(),
-			[] (loadrecord f, loadrecord s) -> bool {
+			[] (loadrecord& f, loadrecord& s) -> bool {
 				return (f.mtime < s.mtime);
 			});
 	time_t mt = data[NUM_TEST / 100 * 99].mtime;
 	std::sort(data.begin(), data.end(),
-			[] (loadrecord f, loadrecord s) -> bool {
+			[] (loadrecord& f, loadrecord& s) -> bool {
 				return (f.ftime < s.ftime);
 			});
 	time_t ft = data[NUM_TEST / 100 * 99].ftime;
@@ -175,14 +180,18 @@ int main(int argc, char ** argv) {
 	std::cout << "Gain rtime = " << double(ft - rt) / ft << std::endl;	
 	std::cout << "Gain mtime = " << double(ft - mt) / ft << std::endl;
 	/* Write the progress of 99-th trails */
+	std::string prhead =
+		"No. blocks fetched, No. blocks reconstructed"; 
 	std::ofstream report_progress(VISUAL_TAIL);
 	unsigned int tright = 0;
+	report_progress << prhead << std::endl;
 	for (unsigned int bleft : data[NUM_TEST / 100 * 99].blockleft) {
 		report_progress << tright << "," << bleft << std::endl;
 		tright++;
 	}
 	report_progress.close();
 	report_progress.open(VISUAL_HEAD);
+	report_progress << prhead << std::endl;
 	tright = 0;
 	for (unsigned int bleft : data[NUM_TEST / 100 * 5].blockleft) {
 		report_progress << tright << "," << bleft << std::endl;
@@ -190,6 +199,7 @@ int main(int argc, char ** argv) {
 	}
 	report_progress.close();
 	report_progress.open(VISUAL_MID);
+	report_progress << prhead << std::endl;
 	tright = 0;
 	for (unsigned int bleft : data[NUM_TEST / 100 * 50].blockleft) {
 		report_progress << tright << "," << bleft << std::endl;
@@ -201,6 +211,9 @@ int main(int argc, char ** argv) {
 	std::ofstream report_dist(VISUAL_DIST);
 	std::ofstream report_cmf(VISUAL_CMF);
 	std::ofstream report_fr(VISUAL_FR);
+	std::string sthead = "Time, \% of blocks arrived,"
+		"\% of blocks constructed, Finish, Finish w. caching";
+	report_cmf << sthead << std::endl;
 	for (time_t i = 0; i < TIME_RANGE; ++i) {
 		report_cmf << double(i) / 1000 << "," <<
 			double(arrival[i]) / double(arrival[TIME_RANGE-1]) << "," <<
@@ -210,6 +223,7 @@ int main(int argc, char ** argv) {
 			double(constructed[TIME_RANGE-1]) << "," <<
 			std::endl;
 	}
+	report_dist << sthead << std::endl;
 	for (time_t i = 1; i < TIME_RANGE; ++i) {
 		report_dist << double(i) / 1000 << "," <<
 			double(arrival[i] - arrival[i-1]) /
@@ -222,6 +236,8 @@ int main(int argc, char ** argv) {
 			double(constructed[TIME_RANGE-1]) << "," <<
 			std::endl;	
 	}
+	report_fr << "Num, No. Block per Interval, Num. Block Restored" <<
+		std::endl;
 	for (time_t i = 0; i < BLOCK_RANGE; ++i) {
 		report_fr << i + 1 << "," <<
 			nwait[i] << "," << nrestore[i] << std::endl;

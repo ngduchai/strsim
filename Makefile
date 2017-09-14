@@ -5,6 +5,7 @@ LIB = -lpthread
 SRC = src
 OBJ = obj
 VISUAL_DATA = visual/data
+VISUAL_FIGS = visual/figs
 TESTS = tests
 INCLUDE = include
 BIN = bin
@@ -36,7 +37,7 @@ SIMPLE_SIM = $(addprefix $(OBJ)/, code.o store.o simplesim.o)
 all: prepare
 
 prepare:
-	mkdir -p $(BIN) $(OBJ) $(VISUAL_DATA)
+	mkdir -p $(BIN) $(OBJ) $(VISUAL_DATA) $(VISUAL_FIGS)
 
 test: testrand
 
