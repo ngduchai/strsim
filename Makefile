@@ -33,6 +33,7 @@ HEADER = $(wildcard $(INCLUDE)/*.h)
 TEST_RAND = tests/rand.cpp $(addprefix $(OBJ)/, code.o store.o)
 TEST_CODE = tests/code.cpp $(addprefix $(OBJ)/, code.o)
 SIMPLE_SIM = $(addprefix $(OBJ)/, code.o store.o simplesim.o)
+DL_SIM = $(addprefix $(OBJ)/, code.o store.o dlsim.o)
 
 all: prepare
 
@@ -55,7 +56,8 @@ testcode: $(TEST_CODE)
 simplesim: $(SIMPLE_SIM)
 	$(MAKE) $(LFLAGS) $(SIMPLE_SIM) -o $(ROOT)/$(BIN)/simplesim $(LIB)
 
-
+dlsim: $(DL_SIM)
+	$(MAKE) $(LFLAGS) $(DL_SIM) -o $(ROOT)/$(BIN)/dlsim $(LIB)
 
 # Create objects from sources
 $(OBJ)/%.o: %.cpp ${HEADER}

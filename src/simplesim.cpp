@@ -21,6 +21,7 @@
 #define VISUAL_HEAD "visual/data/head"
 #define VISUAL_MID "visual/data/mid"
 #define VISUAL_SCALARS "visual/data/scalars"
+#define VISUAL_CMFTAIL "visual/data/cmftail"
 
 struct loadrecord {
 	// blocks used for reconstruct the original data
@@ -250,6 +251,65 @@ int main(int argc, char ** argv) {
 	delete[] rcache;
 	delete[] nwait;
 	delete[] nrestore;
+
+	/* Rerun the last 10% of trails to investigate the case */
+	arrival = new unsigned long [TIME_RANGE];
+	complete = new unsigned long [TIME_RANGE];
+	constructed = new unsigned long [TIME_RANGE];
+	for (unsigned int i = 0; i < TIME_RANGE; ++i) {
+		arrival[i] = 0;
+		complete[i] = 0;
+		constructed[i] = 0;
+	}
+	unsigned int ttl = 10;
+	while (ttl > 0) {
+		for (unsigned int i = NUM_TEST / 100 * 90; i < NUM_TEST; ++i) {
+		//for (unsigned int i = 0; i < NUM_TEST / 10; ++i) {
+			for (auto block : data[i].blocks) {
+				block->arrieve_time = eg.sample();
+				if (block->arrieve_time >= TIME_RANGE) {
+					continue;
+				}
+				for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
+					arrival[j]++;
+				}
+			}
+			std::sort(data[i].blocks.begin(), data[i].blocks.end(),
+					[] (strsim::coded_block* f,
+						strsim::coded_block* s) -> bool {
+					return (f->arrieve_time < s->arrieve_time);
+					});
+			coder.restart();
+			unsigned int lastleft = RAW_SIZE;
+			for (auto block : data[i].blocks) {
+				unsigned int bleft = coder.decode(block);
+				if (bleft < lastleft) {
+					for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
+						complete[j] += lastleft - bleft;
+					}
+					lastleft = bleft;
+				}
+				if (coder.has_finished()) {
+					for (time_t j = block->arrieve_time; j < TIME_RANGE; ++j) {
+						constructed[j]++;
+					}
+					break;
+				}
+			}
+		}
+		ttl--;
+	}
+	report_cmf.open(VISUAL_CMFTAIL);
+	report_cmf << "Time, Arrival, Complete, Constructed" << std::endl;
+	for (time_t i = 0; i < TIME_RANGE; ++i) {
+		report_cmf << double(i) / 1000 << "," <<
+			double(arrival[i]) / double(arrival[TIME_RANGE-1]) << "," <<
+			double(complete[i]) / double(complete[TIME_RANGE-1]) << "," <<
+			double(constructed[i]) / double(constructed[TIME_RANGE-1]) << "," <<
+			std::endl;	
+	}
+	report_cmf.close();
+
 	return 0;
 }
 

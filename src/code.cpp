@@ -168,4 +168,20 @@ unsigned int strsim::rateless_coder::decode(strsim::coded_block * b) {
 	return _num_blocks - _raw_queue.size();
 }
 
+void strsim::min_coder::encode(unsigned int inum, unsigned int onum,
+		std::vector<coded_block *> &b) {
+	_num_blocks = _block_left = inum;
+	for (unsigned int i = 0; i < onum; ++i) {
+		b.push_back(new min_block());
+	}
+}
+
+unsigned int strsim::min_coder::decode(coded_block * /* unused */) {
+	if (!has_finished()) {
+		_block_left--;
+	}
+	return _block_left;
+}
+
+
 

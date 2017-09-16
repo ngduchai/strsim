@@ -8,6 +8,7 @@
 #include "common.h"
 
 #define RATELESS_TYPE 1
+#define MIN_TYPE 2
 
 namespace strsim {
 
@@ -17,6 +18,11 @@ namespace strsim {
 		int virtual type(void) = 0;
 		time_t arrieve_time;
 		virtual ~coded_block() {};
+	};
+
+	class min_block : public coded_block {
+		int virtual type(void) { return MIN_TYPE; };
+		virtual ~min_block() {};
 	};
 
 	class rateless_block : public coded_block {	
@@ -31,6 +37,8 @@ namespace strsim {
 	/** Encode raw data to a set of @ref coded_block and reverse */
 	class coder {
 	public:
+		typedef unsigned int value_type;
+		typedef unsigned int size_type;
 		/**
 		 * @brief generate coded blocks from raw data.
 		 * The method also restarts the decode engine.
@@ -112,9 +120,6 @@ namespace strsim {
 
 
 	class rateless_coder : public coder {
-	public:
-		typedef unsigned int value_type;
-		typedef unsigned int size_type;
 	protected:
 		std::list<value_type> _raw_queue;
 		std::list<std::list<value_type>> _coding_queue;
@@ -155,6 +160,30 @@ namespace strsim {
 			delete _gen;
 			_gen = new soliton_generator();
 		};
+	};
+
+	class min_coder : public coder {
+	private:
+		size_type _num_blocks;
+		size_type _block_left;
+	public:
+		void virtual restart(void) {
+			_block_left = _num_blocks;
+		}
+		min_coder() {};
+		int type(void) { return MIN_TYPE; }
+		void encode(unsigned int inum, unsigned int onum,
+				std::vector<coded_block *> &b);
+		unsigned int decode(coded_block * b);
+		bool virtual inline has_finished(void) {
+			return (_block_left == 0);
+		}
+		void virtual feed(int /* unused */) {
+			if (!has_finished()) {
+				_block_left--;
+			}
+		};
+
 	};
 	
 	
