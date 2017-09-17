@@ -21,6 +21,11 @@ struct loadrecord {
 	unsigned long restore [TIME_RANGE];
 	unsigned long complete [TIME_RANGE];
 	std::vector<time_t> latency;
+	loadrecord() {
+		for (int i = 0; i < TIME_RANGE; ++i) {
+			restore[i] = complete[i] = 0;
+		}
+	}
 	time_t avg_latency() {
 		time_t sumlt = 0;
 		for (time_t lt : latency) {
@@ -38,7 +43,7 @@ int main(int argc, char ** argv) {
 	}
 	const unsigned int RAW_SIZE = std::stoi(argv[1]);
 	const double DUP_FACTOR = std::stod(argv[2]);
-	const unsigned int MAX_DUPFACTOR = std::stod(argv[3]);
+	const double MAX_DUPFACTOR = std::stod(argv[3]);
 	const double CACHE_FACTOR = std::stod(argv[4]);
 	
 	const unsigned int CACHED_SIZE = RAW_SIZE * CACHE_FACTOR;
@@ -80,7 +85,7 @@ int main(int argc, char ** argv) {
 			bool wait = true;
 			for (auto block : blocks) {
 				unsigned int bleft = coder.decode(block);
-				time_t& atime = block->arrieve_time;
+				time_t atime = block->arrieve_time;
 				delete block;
 				if (bleft > lastleft) {
 					for (time_t j = atime; j < TIME_RANGE; ++j) {
@@ -110,7 +115,7 @@ int main(int argc, char ** argv) {
 	}
 
 	std::ofstream report_cmf(VISUAL_DLCMF);
-	report_cmf << "Time,Arrival";
+	report_cmf << "Time,Arrival,";
 	unsigned int factor = 0;
 	for (auto& record : data) {
 		report_cmf << "mn-" << factor << ",";
@@ -125,27 +130,32 @@ int main(int argc, char ** argv) {
 	}
 	report_cmf << std::endl;
 	for (unsigned int i = 0; i < TIME_RANGE; ++i) {
-		report_cmf << double(i) / 1000 << "," << arrival[i] << ",";
+		report_cmf << double(i) / 1000 << "," <<
+			double(arrival[i]) /
+			double(arrival[TIME_RANGE-1]) << ",";
 		for (auto& record : data) {
-			report_cmf << record.complete[i] << ",";
+			report_cmf << double(record.complete[i]) /
+				double(record.complete[TIME_RANGE-1]) << ",";
 		}
 		for (auto& record : cdata) {
-			report_cmf << record.complete[i] << ",";
+			report_cmf << double(record.complete[i]) /
+				double(record.complete[TIME_RANGE-1]) << ",";
 		}
 		report_cmf << std::endl;
 	}
 	
 	std::ofstream report_dl(VISUAL_DLTL);
 	auto ltdata = data.begin();
-	auto ltcdata = cdata.end();
-	unsigned tid = TIME_RANGE / 100 * 99;
+	auto ltcdata = cdata.begin();
+	unsigned tid = NUM_TEST / 100 * 99;
 	report_dl << "extra," <<
 		"avg_latency,cache_avg_latency," << 
-		"tail_latency,cache_latency" << std::endl;
-	for (unsigned int i = 0; i < MAXDUP; i += RAW_SIZE*DUP_FACTOR) {
+		"tail_latency,cache_tail_latency" << std::endl;
+	for (unsigned int i = 0; i < MAXDUP - RAW_SIZE;
+			i += RAW_SIZE*DUP_FACTOR) {
 		report_dl << i << "," <<
 			ltdata->avg_latency() << "," << ltcdata->avg_latency() << "," <<
-			ltcdata->latency[tid] << "," <<
+			ltdata->latency[tid] << "," <<
 			ltcdata->latency[tid] << std::endl;
 		ltdata++;
 		ltcdata++;

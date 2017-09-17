@@ -65,6 +65,7 @@ $(OBJ)/%.o: %.cpp ${HEADER}
 
 clean:
 	rm -rf $(OBJ)/* $(TESTS)/test_* $(BIN)/*
+	rm -rf $(VISUAL_DATA)/* $(VISUAL_FIGS)/*
 
 
 	
