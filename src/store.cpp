@@ -18,5 +18,13 @@ strsim::erlang_generator::value_type strsim::erlang_generator::sample(void) {
 }
 
 
+strsim::rnd_generator::value_type strsim::gaussian_generator::sample(void) {
+	double smp = 0;
+	do {
+		smp = _dist(_gen);
+	} while (smp < 0);
+	return SCALE * smp;
+}
+
 
 

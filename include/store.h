@@ -26,6 +26,17 @@ namespace strsim {
 		double _delay;
 	};
 
+	class gaussian_generator : public rnd_generator {
+	public:
+		gaussian_generator(double mu, double sigma) :
+		   	_gen(std::random_device()()), _dist(mu, sigma) {};
+		gaussian_generator() : gaussian_generator(0.0, 10.0) {};
+		value_type virtual sample(void);
+	private: 
+		std::mt19937 _gen;
+		std::normal_distribution<double> _dist;
+	};
+
 }
 
 #endif

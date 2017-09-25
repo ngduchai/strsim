@@ -47,8 +47,10 @@ int main(int argc, char ** argv) {
 	const unsigned int CODED_SIZE = RAW_SIZE * DUP_FACTOR;
 	const unsigned int CACHED_SIZE  = RAW_SIZE * CACHE_FACTOR;
 	
-	strsim::luby_coder coder;
-	strsim::erlang_generator eg(SHAPE, RATE, DELAY);
+	//strsim::luby_coder coder;
+	strsim::min_coder coder;
+	//strsim::erlang_generator eg(SHAPE, RATE, DELAY);
+	strsim::gaussian_generator gg(SHAPE, RATE, DELAY);
 	
 	// number of block arrival after a certain point of time
 	unsigned long * arrival = new unsigned long [TIME_RANGE];

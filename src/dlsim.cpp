@@ -52,7 +52,8 @@ int main(int argc, char ** argv) {
 	unsigned long * arrival = new unsigned long [TIME_RANGE];
 	
 	strsim::min_coder coder;
-	strsim::erlang_generator eg(SHAPE, RATE, DELAY);
+	//strsim::erlang_generator eg(SHAPE, RATE, DELAY);
+	strsim::gaussian_generator gg(4.0, 1.0);
 
 	std::list<loadrecord> data;
 	std::list<loadrecord> cdata;
@@ -67,7 +68,8 @@ int main(int argc, char ** argv) {
 			std::vector<strsim::coded_block *> blocks;
 			coder.encode(RAW_SIZE, num_blocks, blocks);
 			for (auto block : blocks) {
-				block->arrieve_time = eg.sample();
+				//block->arrieve_time = eg.sample();
+				block->arrieve_time = gg.sample();
 				if (block->arrieve_time >= TIME_RANGE) {
 					continue;
 				}
