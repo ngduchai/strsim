@@ -1,3 +1,19 @@
+
+/*
+ * Simulate the data construction process
+ * Input:
+ * 	- raw size
+ * 	- dup_factor
+ * 	- cache_factor
+ * Output:
+ *  - The CMF of arrival time
+ *  - The CMF of completion time without caching
+ *  - The CMF of completion time with caching
+ *  - Average and tail latency without caching
+ *  - Average and tail latency with caching
+ *  - The progress or number of blocks left as time advances
+ * */
+
 #include <iostream>
 #include <algorithm>
 #include <fstream>

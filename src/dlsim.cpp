@@ -1,3 +1,18 @@
+
+/*
+ * Simulate the effect of duplication factor
+ * while fixing the amount of data cached in memory
+ * Input:
+ * 	- raw size
+ * 	- dup_factor (step of increament
+ * 	- max_dupfactor (the highest amount of duplication
+ * 	- cache_factor
+ * Output:
+ *  - The CMF of arrival time
+ *  - The CMF of completion time with different dup factors with caching
+ *  - The CMF of completion time with different dup facotrs without caching
+ * */
+
 #include <iostream>
 #include <list>
 #include <vector>

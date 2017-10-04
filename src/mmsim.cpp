@@ -1,3 +1,18 @@
+
+/*
+ * Simulate the effect of caching with a fix amount of duplication
+ * Input:
+ * 	- raw_size
+ * 	- dup_factod
+ * 	- cache_factor (step of increment)
+ * 	- max_cachefactor
+ * Output:
+ *  - The CMF of arrival time
+ *  - The CMF of completion time with different amount of caching
+ *  - The average and tail latency with diffrent amount of caching
+ *
+ * */
+
 #include <iostream>
 #include <list>
 #include <vector>
