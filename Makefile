@@ -32,8 +32,11 @@ HEADER = $(wildcard $(INCLUDE)/*.h)
 # Object files needed by modules
 TEST_RAND = tests/rand.cpp $(addprefix $(OBJ)/, code.o store.o)
 TEST_CODE = tests/code.cpp $(addprefix $(OBJ)/, code.o)
+TEST_DL = tests/dl.cpp $(addprefix $(OBJ)/, store.o)
 SIMPLE_SIM = $(addprefix $(OBJ)/, code.o store.o simplesim.o)
 DL_SIM = $(addprefix $(OBJ)/, code.o store.o dlsim.o)
+MM_SIM = $(addprefix $(OBJ)/, code.o store.o mmsim.o)
+DL_CMF = $(addprefix $(OBJ)/, store.o dlcmf.o)
 
 all: prepare
 
@@ -53,11 +56,24 @@ testcode: $(TEST_CODE)
 	$(ROOT)/$(TESTS)/test_code
 
 # Test random generators
+testdl: $(TEST_DL)
+	$(MAKE) $(LFLAGS) $(TEST_DL) -o $(ROOT)/$(TESTS)/test_dl $(LIB)
+	$(ROOT)/$(TESTS)/test_dl
+
+# Test random generators
 simplesim: $(SIMPLE_SIM)
 	$(MAKE) $(LFLAGS) $(SIMPLE_SIM) -o $(ROOT)/$(BIN)/simplesim $(LIB)
 
 dlsim: $(DL_SIM)
 	$(MAKE) $(LFLAGS) $(DL_SIM) -o $(ROOT)/$(BIN)/dlsim $(LIB)
+
+mmsim: $(MM_SIM)
+	$(MAKE) $(LFLAGS) $(MM_SIM) -o $(ROOT)/$(BIN)/mmsim $(LIB)
+
+dlcmf: $(DL_CMF)
+	$(MAKE) $(LFLAGS) $(DL_CMF) -o $(ROOT)/$(BIN)/dlcmf $(LIB)
+
+
 
 # Create objects from sources
 $(OBJ)/%.o: %.cpp ${HEADER}

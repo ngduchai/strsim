@@ -14,8 +14,8 @@
 #define TIME_RANGE 10000
 #define BLOCK_RANGE 100
 
-#define VISUAL_DLCMF "visual/data/dlcmf"
-#define VISUAL_DLTL "visual/data/dltl"
+#define VISUAL_DLCMF "visual/data/mmcmf"
+#define VISUAL_DLTL "visual/data/mmtl"
 
 struct loadrecord {
 	unsigned long restore [TIME_RANGE];
@@ -38,17 +38,17 @@ struct loadrecord {
 int main(int argc, char ** argv) {
 	if (argc != 5) {
 		std::cerr << "Usage: simplesim [raw_size] " <<
-			"[dup_factor] [max_dupfactor] [cache_factor]" << std::endl;
+			"[cache_factor] [max_cachefactor] [dup_factor]" << std::endl;
 		return 1;
 	}
 	const unsigned int RAW_SIZE = std::stoi(argv[1]);
-	const double DUP_FACTOR = std::stod(argv[2]);
-	const double MAX_DUPFACTOR = std::stod(argv[3]);
-	const double CACHE_FACTOR = std::stod(argv[4]);
+	const double CACHE_FACTOR = std::stod(argv[2]);
+	const double MAX_CACHEFACTOR = std::stod(argv[3]);
+	const double DUP_FACTOR = std::stod(argv[4]);
 	
-	const unsigned int CACHED_SIZE = RAW_SIZE * CACHE_FACTOR;
-	const unsigned int MAXDUP = RAW_SIZE * MAX_DUPFACTOR;
-	unsigned int num_blocks = RAW_SIZE;
+	const unsigned int MAXCACHE = RAW_SIZE * MAX_CACHEFACTOR;
+	unsigned int cached_size = 0;
+	unsigned int num_blocks = RAW_SIZE * DUP_FACTOR;
 	unsigned long * arrival = new unsigned long [TIME_RANGE];
 	
 	strsim::min_coder coder;
@@ -56,14 +56,11 @@ int main(int argc, char ** argv) {
 	strsim::gaussian_generator gg(4.0, 0.2);
 
 	std::list<loadrecord> data;
-	std::list<loadrecord> cdata;
 
-	while (num_blocks <= MAXDUP) {
+	while (cached_size <= MAXCACHE) {
 		loadrecord trail;
-		loadrecord ctrail;
-		std::cout << "Load data with extra " <<
-			double(num_blocks - RAW_SIZE) / RAW_SIZE * 100 <<
-			"%" << std::endl;
+		std::cout << "Load data with cache size " <<
+			cached_size << std::endl;
 		for (unsigned int i = 0; i < NUM_TEST; ++i) {
 			std::vector<strsim::coded_block *> blocks;
 			coder.encode(RAW_SIZE, num_blocks, blocks);
@@ -84,7 +81,6 @@ int main(int argc, char ** argv) {
 			});
 			coder.restart();
 			unsigned int lastleft = RAW_SIZE;
-			bool wait = true;
 			for (auto block : blocks) {
 				unsigned int bleft = coder.decode(block);
 				time_t atime = block->arrieve_time;
@@ -92,18 +88,10 @@ int main(int argc, char ** argv) {
 				if (bleft < lastleft) {
 					for (time_t j = atime; j < TIME_RANGE; ++j) {
 						trail.restore[j] += lastleft - bleft;
-						ctrail.restore[j] += lastleft - bleft;
 					}
 					lastleft = bleft;
 				}
-				if (bleft <= CACHED_SIZE && wait) {
-					ctrail.latency.push_back(atime);
-					for (time_t j = atime; j < TIME_RANGE; ++j) {
-						ctrail.complete[j]++;
-					}
-					wait = false;
-				}
-				if (coder.has_finished()) {
+				if (bleft <= cached_size) {
 					trail.latency.push_back(atime);
 					for (time_t j = atime; j < TIME_RANGE; ++j) {
 						trail.complete[j]++;
@@ -113,23 +101,16 @@ int main(int argc, char ** argv) {
 			}
 		}
 		data.push_back(trail);
-		cdata.push_back(ctrail);
-		num_blocks += (unsigned int)(RAW_SIZE * DUP_FACTOR);
+		cached_size += (unsigned int)(RAW_SIZE * CACHE_FACTOR);
 	}
 
 	std::ofstream report_cmf(VISUAL_DLCMF);
 	report_cmf << "Time,Arrival,";
 	unsigned int factor = 0;
 	for (auto& record : data) {
-		report_cmf << "mn-" << factor << ",";
+		report_cmf << factor << ",";
 		std::sort(record.latency.begin(), record.latency.end());
-		factor += RAW_SIZE * DUP_FACTOR;
-	}
-	factor = 0;
-	for (auto& record : cdata) {
-		report_cmf << "cachemn-" << factor << ",";
-		std::sort(record.latency.begin(), record.latency.end());
-		factor += RAW_SIZE * DUP_FACTOR;
+		factor += RAW_SIZE * CACHE_FACTOR;
 	}
 	report_cmf << std::endl;
 	for (unsigned int i = 0; i < TIME_RANGE; ++i) {
@@ -140,28 +121,19 @@ int main(int argc, char ** argv) {
 			report_cmf << double(record.complete[i]) /
 				double(record.complete[TIME_RANGE-1]) << ",";
 		}
-		for (auto& record : cdata) {
-			report_cmf << double(record.complete[i]) /
-				double(record.complete[TIME_RANGE-1]) << ",";
-		}
 		report_cmf << std::endl;
 	}
 	
 	std::ofstream report_dl(VISUAL_DLTL);
 	auto ltdata = data.begin();
-	auto ltcdata = cdata.begin();
 	unsigned tid = NUM_TEST / 100 * 99;
-	report_dl << "extra," <<
-		"avg_latency,cache_avg_latency," << 
-		"tail_latency,cache_tail_latency" << std::endl;
-	for (unsigned int i = 0; i < MAXDUP - RAW_SIZE;
-			i += RAW_SIZE*DUP_FACTOR) {
+	report_dl << "extra,avg_latency,tail_latency" << std::endl;
+	for (unsigned int i = 0; i < MAXCACHE;
+			i += RAW_SIZE*CACHE_FACTOR) {
 		report_dl << i << "," <<
-			ltdata->avg_latency() << "," << ltcdata->avg_latency() << "," <<
-			ltdata->latency[tid] << "," <<
-			ltcdata->latency[tid] << std::endl;
+			ltdata->avg_latency() << "," <<
+			ltdata->latency[tid] << "," << std::endl;
 		ltdata++;
-		ltcdata++;
 	}
 
 	report_cmf.close();

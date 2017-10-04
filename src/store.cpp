@@ -26,5 +26,9 @@ strsim::rnd_generator::value_type strsim::gaussian_generator::sample(void) {
 	return SCALE * smp;
 }
 
+strsim::rnd_generator::value_type strsim::exponential_generator::sample(void) {
+	return SCALE * _dist(_gen);
+}
+
 
 

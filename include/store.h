@@ -36,7 +36,19 @@ namespace strsim {
 		std::mt19937 _gen;
 		std::normal_distribution<double> _dist;
 	};
+	
+	class exponential_generator : public rnd_generator {
+	public:
+		exponential_generator(double lambda) :
+		   	_gen(std::random_device()()), _dist(lambda) {};
+		exponential_generator() : exponential_generator(2.0) {};
+		value_type virtual sample(void);
+	private: 
+		std::mt19937 _gen;
+		std::exponential_distribution<double> _dist;
+	};
 
+	
 }
 
 #endif
