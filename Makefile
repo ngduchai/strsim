@@ -36,6 +36,8 @@ TEST_DL = tests/dl.cpp $(addprefix $(OBJ)/, store.o)
 SIMPLE_SIM = $(addprefix $(OBJ)/, code.o store.o simplesim.o)
 DL_SIM = $(addprefix $(OBJ)/, code.o store.o dlsim.o)
 MM_SIM = $(addprefix $(OBJ)/, code.o store.o mmsim.o)
+LBW_SIM = $(addprefix $(OBJ)/, code.o store.o lbwsim.o)
+BM_SIM = $(addprefix $(OBJ)/, code store.o bmsim.o)
 DL_CMF = $(addprefix $(OBJ)/, store.o dlcmf.o)
 
 all: prepare
@@ -70,8 +72,15 @@ dlsim: $(DL_SIM)
 mmsim: $(MM_SIM)
 	$(MAKE) $(LFLAGS) $(MM_SIM) -o $(ROOT)/$(BIN)/mmsim $(LIB)
 
+lbwsim: $(LBW_SIM)
+	$(MAKE) $(LFLAGS) $(LBW_SIM) -o $(ROOT)/$(BIN)/lbwsim $(LIB)
+
+bmsim: $(BM_SIM)
+	$(MAKE) $(LFLAGS) $(BM_SIM) -o $(ROOT)/$(BIN)/bmsim $(LIB)
+
 dlcmf: $(DL_CMF)
 	$(MAKE) $(LFLAGS) $(DL_CMF) -o $(ROOT)/$(BIN)/dlcmf $(LIB)
+
 
 
 

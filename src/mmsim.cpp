@@ -68,7 +68,7 @@ int main(int argc, char ** argv) {
 	
 	strsim::min_coder coder;
 	//strsim::erlang_generator eg(SHAPE, RATE, DELAY);
-	strsim::gaussian_generator gg(4.0, 0.2);
+	strsim::gaussian_generator gg(2.0, 1.0);
 
 	std::list<loadrecord> data;
 
