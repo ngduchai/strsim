@@ -37,7 +37,7 @@ SIMPLE_SIM = $(addprefix $(OBJ)/, code.o store.o simplesim.o)
 DL_SIM = $(addprefix $(OBJ)/, code.o store.o dlsim.o)
 MM_SIM = $(addprefix $(OBJ)/, code.o store.o mmsim.o)
 LBW_SIM = $(addprefix $(OBJ)/, code.o store.o lbwsim.o)
-BM_SIM = $(addprefix $(OBJ)/, code store.o bmsim.o)
+BM_SIM = $(addprefix $(OBJ)/, code.o store.o bmsim.o)
 DL_CMF = $(addprefix $(OBJ)/, store.o dlcmf.o)
 
 all: prepare
