@@ -149,7 +149,7 @@ int main(int argc, char ** argv) {
 	unsigned int num_cache = MAX_CACHE / CACHE_FACTOR + 1;
 	unsigned int num_dup = MAX_DUP / DUP_FACTOR + 1;
 
-	NUM_PROC = std::thread::hardware_concurrency();
+	NUM_PROC = std::thread::hardware_concurrency() / 2;
 	std::cout << "Number of processors: " << NUM_PROC << std::endl;
 
 	/* Initialize space for putting results */
