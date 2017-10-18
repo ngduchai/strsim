@@ -24,7 +24,7 @@
 #include "store.h"
 
 #define MU 4
-#define SIGMA 2
+#define SIGMA 1
 
 #define NUM_TEST 10000
 #define TIME_RANGE 10000
