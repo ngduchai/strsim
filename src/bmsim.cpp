@@ -173,6 +173,9 @@ int main(int argc, char ** argv) {
 
 	bool done = false;
 	unsigned int min_prg = 0;
+	if (num_cache <= 1){
+		done = true;
+	}
 	
 	while (!done) {
 		unsigned int mprg = num_cache;
@@ -204,7 +207,7 @@ int main(int argc, char ** argv) {
 	/* Calculate results */
 	for (unsigned int i = 1; i < NUM_PROC; ++i) {
 		for (unsigned int j = 0; j < num_cache; ++j) {
-			for (unsigned int k = 0; k < num_cache; ++k) {
+			for (unsigned int k = 0; k < num_dup; ++k) {
 				data[0][j][k] += data[i][j][k];
 			}
 		}
