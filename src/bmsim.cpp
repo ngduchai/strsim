@@ -1,6 +1,6 @@
 
 /*
- * Simulate the effect of caching with a fix amount of duplication
+ * Simulate the effect of each increment of caching and duplication
  * Input:
  * 	- raw_size
  * 	- dup_factod

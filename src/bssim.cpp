@@ -74,8 +74,10 @@ void bmsim(unsigned int raw_size, double cache_factor, unsigned int cache_count,
 
 	strsim::min_coder coder;
 	strsim::gaussian_generator gg(MU, SIGMA);
+	strsim::gaussian_generator gl(2*MU, 2*SIGMA);
 	
 	const unsigned int UNIT_TEST = NUM_TEST / NUM_PROC;
+
 
 	*prg = 0;
 	for (unsigned int cid = 0; cid < cache_count; ++cid) {
@@ -84,15 +86,23 @@ void bmsim(unsigned int raw_size, double cache_factor, unsigned int cache_count,
 			unsigned int dup_size = (1 + did * dup_factor) * raw_size;
 			loadrecord trail;
 			unsigned int num_blocks = dup_size;
+			unsigned int num_bl = dup_size * BRATE;
+			
+			std::vector<strsim::coded_block *> blocks;
+			coder.encode(raw_size, num_blocks, blocks);
+		
 			/*
 			std::cout << "Load data with cache_size: " << cache_sz
 				", dup_size: " << dup_sz << std::endl;
 			*/
 			for (unsigned int i = 0; i < UNIT_TEST; ++i) {
-				std::vector<strsim::coded_block *> blocks;
-				coder.encode(raw_size, num_blocks, blocks);
+				for (unsigned int bid = 0; bid < num_bl; ++bid) {
+					blocks[i]->arrieve_time = gl.sample();
+				}
+				for (unsigned int bid = num_bl; bid < num_blocks; ++bid) {
+					blocks[bid]->arrieve_time = gg.sample();
+				}
 				for (auto block : blocks) {
-					block->arrieve_time = gg.sample();
 					if (block->arrieve_time >= TIME_RANGE) {
 						continue;
 					}
@@ -124,11 +134,11 @@ void bmsim(unsigned int raw_size, double cache_factor, unsigned int cache_count,
 						break;
 					}
 				}
-				for (auto block : blocks) {
-					delete block;
-				}
 			}
 			data[cid][did] = trail;
+			for (auto block : blocks) {
+				delete block;
+			}
 		}
 		(*prg)++;
 	}

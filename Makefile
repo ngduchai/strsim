@@ -38,6 +38,7 @@ DL_SIM = $(addprefix $(OBJ)/, code.o store.o dlsim.o)
 MM_SIM = $(addprefix $(OBJ)/, code.o store.o mmsim.o)
 LBW_SIM = $(addprefix $(OBJ)/, code.o store.o lbwsim.o)
 BM_SIM = $(addprefix $(OBJ)/, code.o store.o bmsim.o)
+BS_SIM = $(addprefix $(OBJ)/, code.o store.o bssim.o)
 DL_CMF = $(addprefix $(OBJ)/, store.o dlcmf.o)
 
 all: prepare
@@ -77,6 +78,9 @@ lbwsim: $(LBW_SIM)
 
 bmsim: $(BM_SIM)
 	$(MAKE) $(LFLAGS) $(BM_SIM) -o $(ROOT)/$(BIN)/bmsim $(LIB)
+
+bssim: $(BS_SIM)
+	$(MAKE) $(LFLAGS) $(BS_SIM) -o $(ROOT)/$(BIN)/bssim $(LIB)
 
 dlcmf: $(DL_CMF)
 	$(MAKE) $(LFLAGS) $(DL_CMF) -o $(ROOT)/$(BIN)/dlcmf $(LIB)
